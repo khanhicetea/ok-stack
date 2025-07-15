@@ -14,7 +14,7 @@ const config = defineConfig({
     react(),
     tanstackStart({
       customViteReactPlugin: true,
-      target: "node-server",
+      target: "vercel",
     }),
   ],
 });
