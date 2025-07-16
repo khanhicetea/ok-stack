@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/orpc/react";
 
 export const Route = createFileRoute("/demo/tanstack-query")({
-  ssr: "data-only",
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(context.orpc.ping.queryOptions());
     await context.queryClient.prefetchQuery(context.orpc.pong.queryOptions());
