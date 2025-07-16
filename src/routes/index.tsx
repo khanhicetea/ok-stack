@@ -1,21 +1,22 @@
-import { createFileRoute } from '@tanstack/react-router'
-import logo from '../logo.svg'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
+  loader: async ({ context }) => {
+    const user = await context.getCurrentUser()
+    console.log("user", user)
+    return { user }
+  },
   component: App,
-})
+});
 
 function App() {
+  const data = Route.useLoaderData()
+
   return (
     <div className="text-center">
       <header className="min-h-screen flex flex-col items-center justify-center bg-[#282c34] text-white text-[calc(10px+2vmin)]">
-        <img
-          src={logo}
-          className="h-[40vmin] pointer-events-none animate-[spin_20s_linear_infinite]"
-          alt="logo"
-        />
         <p>
-          Edit <code>src/routes/index.tsx</code> and save to reload.
+          {data.user?.email}
         </p>
         <a
           className="text-[#61dafb] hover:underline"
@@ -35,5 +36,5 @@ function App() {
         </a>
       </header>
     </div>
-  )
+  );
 }

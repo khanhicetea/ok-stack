@@ -7,7 +7,7 @@ const handler = new RPCHandler(router, {
   plugins: [new BatchHandlerPlugin()],
 });
 
-async function handle({ request }: { request: Request }) {
+async function handle({ request, context }: { request: Request }) {
   const { response } = await handler.handle(request, {
     prefix: "/api/orpc",
     context: {}, // Provide initial context if needed

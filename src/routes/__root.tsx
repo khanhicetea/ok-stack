@@ -13,10 +13,12 @@ import appCss from "../styles.css?url";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ORPCQueryClient } from "@/orpc/react.ts";
+import type { CurrentUserFn } from "@/lib/auth";
 
 interface MyRouterContext {
   queryClient: QueryClient;
   orpc: ORPCQueryClient;
+  getCurrentUser: CurrentUserFn;
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
