@@ -15,13 +15,16 @@ export const Route = createFileRoute("/demo/tanstack-query")({
 
 function TanStackQueryDemo() {
   const { data: msg } = useQuery(orpc.ping.queryOptions());
-  const { data: msh } = useQuery(orpc.pong.queryOptions());
+  const { data: result } = useQuery(orpc.pong.queryOptions());
 
   return (
     <div className="p-4">
-      <p>
-        {msg} {msh}
-      </p>
+      <p>{msg}</p>
+      <ul>
+        {result?.rows?.map((row) => (
+          <li key={row.id}>{row.title}</li>
+        ))}
+      </ul>
     </div>
   );
 }

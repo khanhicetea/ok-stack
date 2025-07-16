@@ -11,11 +11,11 @@ const config = defineConfig({
       projects: ["./tsconfig.json"],
     }),
     tailwindcss(),
-    react(),
     tanstackStart({
       customViteReactPlugin: true,
       target: "vercel",
     }),
+    react(),
   ],
 });
 
