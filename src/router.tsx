@@ -7,7 +7,7 @@ import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 import { orpc } from "@/orpc/react";
 import { QueryClient } from "@tanstack/react-query";
-import { getCurrentUserFn } from "@/lib/auth";
+import { getCurrentUserFn, type CurrentUserFn } from "@/lib/auth";
 
 export function getContext() {
   const queryClient = new QueryClient({
@@ -21,7 +21,18 @@ export function getContext() {
   return {
     queryClient: queryClient,
     orpc: orpc,
-    getCurrentUser: getCurrentUserFn(),
+    getCurrentUser: async () => {
+      const currentUser = await queryClient.ensureQueryData({
+        queryKey: ["currentUser"],
+        staleTime: 10 * 1000,
+        queryFn: getCurrentUserFn(),
+      });
+      console.log("currnet", currentUser);
+
+      return queryClient.getQueryData([
+        "currentUser",
+      ]) as ReturnType<CurrentUserFn>;
+    },
   };
 }
 
