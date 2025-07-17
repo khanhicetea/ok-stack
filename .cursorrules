@@ -9,7 +9,96 @@ This document provides rules and guidelines for an AI assistant to ensure consis
 - **TypeScript First**: Write all code in TypeScript with strict type safety. Leverage inferred types where possible, but be explicit when clarity is needed. Use the `zod` library for schema validation, especially for environment variables and API inputs.
 - **Path Aliases**: Always use the `@/*` path alias for imports from the `src` directory to maintain clean and consistent import paths. For example, import a component with `import { Button } from '@/components/ui/button'`.
 
-## 2. Frontend Development
+## 2. Schema Management & Code Reuse
+
+### Database Schema Structure
+- Database schemas are defined in `src/db/schema/` directory with separate files for each domain (e.g., `auth-schema.ts`, `todo-schema.ts`)
+- Each schema file should export table definitions using Drizzle ORM
+- Always export schemas from `src/db/schema/index.ts` for centralized imports
+
+### Schema Reuse Patterns
+To avoid repetitive code, follow these patterns for schema validation:
+
+#### oRPC Input Validation
+Create reusable Zod schemas for oRPC procedures:
+
+```typescript
+// src/orpc/todo.ts
+import { z } from "zod";
+
+// Base validation schemas
+const createTodoSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  description: z.string().optional(),
+});
+
+const updateTodoSchema = z.object({
+  id: z.number().int().positive(),
+  title: z.string().min(1, "Title is required").max(200, "Title too long").optional(),
+  description: z.string().optional(),
+  completed: z.boolean().optional(),
+});
+
+// Use in oRPC procedures
+export const createTodo = baseOS
+  .use(authMiddleware)
+  .input(createTodoSchema)
+  .handler(async ({ context, input }) => {
+    // Implementation
+  });
+```
+
+#### Frontend Form Validation
+Reuse the same validation logic in Tanstack Form:
+
+```typescript
+// src/components/TodoForm.tsx
+import { useForm } from "@tanstack/react-form";
+
+const form = useForm({
+  defaultValues: {
+    title: todo?.title ?? "",
+    description: todo?.description ?? "",
+  },
+  onSubmit: async ({ value }) => {
+    // Submit logic
+  },
+});
+
+// Field validation should match oRPC schema constraints
+<form.Field
+  name="title"
+  validators={{
+    onChange: ({ value }) => {
+      if (!value || value.trim().length === 0) {
+        return "Title is required";
+      }
+      if (value.length > 200) {
+        return "Title too long";
+      }
+    },
+  }}
+>
+```
+
+#### TypeScript Types from Database Schema
+Extract types from Drizzle schemas to ensure consistency:
+
+```typescript
+// src/db/schema/todo-schema.ts
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
+
+export const todo = pgTable("todo", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  // ... other fields
+});
+
+export type Todo = InferSelectModel<typeof todo>;
+export type InsertTodo = InferInsertModel<typeof todo>;
+```
+
+## 3. Frontend Development
 
 ### Tanstack Router (File-Based Routing)
 - All routes are defined within the `src/routes/` directory.
@@ -19,13 +108,97 @@ This document provides rules and guidelines for an AI assistant to ensure consis
 
 ### Tanstack Query (Data Fetching & Caching)
 - Use Tanstack Query for all interactions with the server's state.
-- For fetching data, use the `createQuery` options from `@tanstack/react-query`.
-- For creating, updating, or deleting data, use mutations created via `@orpc/tanstack-query` which wrap oRPC procedures.
+- For fetching data, use the `useQuery` hook with oRPC query options.
+- For mutations, use `useMutation` with oRPC mutation options.
+- Always invalidate related queries after successful mutations.
+
+#### Query Pattern Example:
+```typescript
+import { orpc } from "@/orpc/react";
+import { useQuery } from "@tanstack/react-query";
+
+// Fetch data
+const { data: todos } = useQuery(orpc.todo.getTodos.queryOptions());
+```
+
+#### Mutation Pattern Example:
+```typescript
+import { orpc } from "@/orpc/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+const queryClient = useQueryClient();
+
+const createMutation = useMutation(
+  orpc.todo.createTodo.mutationOptions({
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: orpc.todo.getTodos.queryKey(),
+      });
+      onSuccess?.();
+    },
+  }),
+);
+
+// Usage
+await createMutation.mutateAsync({
+  title: "New todo",
+  description: "Optional description",
+});
+```
 
 ### Tanstack Form (Form State Management)
 - Use `@tanstack/react-form` for managing all forms.
-- Define form fields, validation (preferably with `zod`), and submission logic using the `useForm` hook.
+- Define form fields, validation, and submission logic using the `useForm` hook.
 - Integrate with Shadcn components for the form's UI.
+- Use client-side validation that matches server-side oRPC input validation.
+
+#### Form Pattern Example:
+```typescript
+import { useForm } from "@tanstack/react-form";
+
+const form = useForm({
+  defaultValues: {
+    title: "",
+    description: "",
+  },
+  onSubmit: async ({ value }) => {
+    await createMutation.mutateAsync(value);
+  },
+});
+
+// Field with validation
+<form.Field
+  name="title"
+  validators={{
+    onChange: ({ value }) => {
+      if (!value || value.trim().length === 0) {
+        return "Title is required";
+      }
+      if (value.length > 200) {
+        return "Title too long";
+      }
+    },
+  }}
+>
+  {(field) => (
+    <div>
+      <Label htmlFor="title">Title</Label>
+      <Input
+        id="title"
+        value={field.state.value}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+        placeholder="Enter title"
+      />
+      {field.state.meta.errors.length > 0 && (
+        <p className="text-sm text-red-600 mt-1">
+          {field.state.meta.errors[0]}
+        </p>
+      )}
+    </div>
+  )}
+</form.Field>
+```
 
 ### Shadcn/ui & TailwindCSS
 - **Component Library**: Use components from Shadcn/ui whenever possible. These components live in `src/components/ui`.
@@ -36,13 +209,61 @@ This document provides rules and guidelines for an AI assistant to ensure consis
 - **Styling**: All styling should be done with TailwindCSS utility classes. Use the `clsx` and `tailwind-merge` utilities (via the `cn` helper in `src/lib/utils.ts`) to conditionally apply classes.
 - **Custom Components**: New, reusable components should be created in the `src/components/` directory.
 
-## 3. Backend Development
+## 4. Backend Development
 
 ### oRPC (API Layer)
 - API endpoints are defined as oRPC procedures in the `src/orpc/` directory.
-- Each procedure should be a function that uses `proc` from `@orpc/server`.
+- Each procedure should be a function that uses `os` (OpenSchema) from `@orpc/server`.
 - Use `zod` schemas to define and validate the `input` for each procedure.
 - The oRPC client is pre-configured. Use it on the frontend via the hooks provided by `@orpc/tanstack-query`.
+
+#### oRPC Procedure Pattern:
+```typescript
+import { db } from "@/db";
+import { todo } from "@/db/schema";
+import { authMiddleware } from "@/orpc/middlewares";
+import { os } from "@orpc/server";
+import { z } from "zod";
+
+const baseOS = os.$context<{ headers: Headers }>();
+
+const createTodoSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  description: z.string().optional(),
+});
+
+export const createTodo = baseOS
+  .use(authMiddleware)
+  .input(createTodoSchema)
+  .handler(async ({ context, input }) => {
+    const [newTodo] = await db
+      .insert(todo)
+      .values({
+        title: input.title,
+        description: input.description,
+        userId: context.user.id,
+        completed: false,
+      })
+      .returning();
+
+    return newTodo;
+  });
+```
+
+#### Router Organization:
+```typescript
+// src/orpc/router.ts
+import { getTodos, createTodo, updateTodo, deleteTodo } from "@/orpc/todo";
+
+export const router = {
+  todo: {
+    getTodos,
+    createTodo,
+    updateTodo,
+    deleteTodo,
+  },
+};
+```
 
 ### Drizzle ORM (Database)
 - **Schema**: The database schema is defined across files in the `src/db/schema/` directory, which are exported from `index.ts`. When you need to add or modify tables, edit the relevant file in that directory.
@@ -52,16 +273,148 @@ This document provides rules and guidelines for an AI assistant to ensure consis
   ```
 - **Queries**: Use the Drizzle query builder syntax for all database operations. The Drizzle instance is available from the database connection file.
 
-## 4. Authentication
+#### Database Schema Pattern:
+```typescript
+// src/db/schema/todo-schema.ts
+import { pgTable, text, timestamp, boolean, serial } from "drizzle-orm/pg-core";
+import { user } from "./auth-schema";
+
+export const todo = pgTable("todo", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  completed: boolean("completed").default(false).notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+```
+
+#### Database Query Pattern:
+```typescript
+import { and, desc, eq } from "drizzle-orm";
+
+// Get user's todos
+const todos = await db
+  .select()
+  .from(todo)
+  .where(eq(todo.userId, context.user.id))
+  .orderBy(desc(todo.createdAt));
+
+// Update with ownership check
+const [existingTodo] = await db
+  .select()
+  .from(todo)
+  .where(and(eq(todo.id, id), eq(todo.userId, context.user.id)));
+
+if (!existingTodo) {
+  throw new Error("Todo not found");
+}
+```
+
+## 5. Authentication
 
 - Authentication is handled by the `better-auth` library.
 - On the server, use the `better-auth` helpers to manage sessions and protect oRPC procedures.
 - On the client, access user data and authentication state through the hooks provided by `better-auth`.
 
-## 5. Important Commands
+#### Authentication Middleware Pattern:
+```typescript
+// src/orpc/middlewares.ts
+export const authMiddleware = middleware<{ user: User }>();
+
+// Usage in procedures
+export const protectedProcedure = baseOS
+  .use(authMiddleware)
+  .handler(async ({ context }) => {
+    // context.user is available here
+    return `Hello ${context.user.name}`;
+  });
+```
+
+## 6. Component Development Patterns
+
+### State Management
+- Use React's `useState` for local component state
+- Use Tanstack Query for server state
+- Prefer prop drilling for simple cases; use context sparingly
+
+### Event Handling
+- Use descriptive handler names (e.g., `handleFormSuccess`, `handleEditTodo`)
+- Pass callback functions as props for reusable components
+- Use async/await for asynchronous operations
+
+### Error Handling
+- Handle loading and error states in components
+- Display user-friendly error messages
+- Use React Error Boundaries for unexpected errors
+
+### Component Props Pattern:
+```typescript
+interface TodoFormProps {
+  todo?: Todo;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function TodoForm({ todo, onSuccess, onCancel }: TodoFormProps) {
+  const isEditing = !!todo;
+  // Component logic
+}
+```
+
+## 7. File Organization
+
+### Directory Structure
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # Shadcn components
+│   └── *.tsx           # Custom components
+├── db/
+│   ├── schema/         # Database schema definitions
+│   └── index.ts        # Database connection
+├── orpc/               # API layer
+│   ├── middlewares.ts  # oRPC middlewares
+│   ├── router.ts       # Main router
+│   └── *.ts           # Domain-specific procedures
+├── routes/             # File-based routing
+└── lib/                # Utility functions
+```
+
+### Naming Conventions
+- Use PascalCase for React components
+- Use camelCase for functions and variables
+- Use kebab-case for file names (except React components)
+- Use descriptive names that indicate purpose
+
+## 8. Important Commands
 
 - **Run development server**: `pnpm dev`
 - **Build for production**: `pnpm build`
 - **Generate database migrations**: `pnpm db:generate`
 - **Apply database migrations**: `pnpm db:migrate`
 - **Add a new UI component**: `pnpx shadcn@latest add <component_name>`
+
+## 9. Common Pitfalls to Avoid
+
+1. **Don't duplicate validation logic**: Reuse Zod schemas between oRPC and frontend forms
+2. **Don't forget query invalidation**: Always invalidate related queries after mutations
+3. **Don't skip error handling**: Handle loading, error, and success states appropriately
+4. **Don't hardcode values**: Use environment variables for configuration
+5. **Don't forget authorization**: Check user ownership in oRPC procedures that modify data
+6. **Don't skip TypeScript types**: Use proper typing for all functions and components
+7. **Don't forget to check existing ownership**: Always verify user owns the resource before CRUD operations
+
+## 10. Version-Specific Notes
+
+- **oRPC**: Use `os` (OpenSchema) from `@orpc/server`, not `proc`
+- **Tanstack Form**: Use `@tanstack/react-form` version 1.14.1+ patterns
+- **Drizzle**: Use `$defaultFn(() => new Date())` for timestamps, not `$default`
+- **Better Auth**: Follow the latest authentication patterns in the codebase
