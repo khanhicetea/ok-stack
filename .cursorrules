@@ -1,7 +1,67 @@
-# shadcn instructions
+# AI Coding Instructions for the Full-Stack TypeScript Project
 
-Use the latest version of Shadcn to install new components, like this command to add a button component:
+This document provides rules and guidelines for an AI assistant to ensure consistency, quality, and adherence to the project's architecture and conventions.
 
-```bash
-pnpx shadcn@latest add button
-```
+## 1. General Principles
+
+- **Adhere to the Tech Stack**: This project is built on a specific set of technologies. Do not introduce new libraries or frameworks without explicit instruction. The core stack is Tanstack (Start, Query, Form, Router), oRPC, Drizzle, Better Auth, and TailwindCSS/Shadcn.
+- **Follow Existing Patterns**: Before writing new code, analyze the existing codebase in the relevant directory (`src/routes`, `src/orpc`, `src/components`, etc.) and follow the established patterns and conventions.
+- **TypeScript First**: Write all code in TypeScript with strict type safety. Leverage inferred types where possible, but be explicit when clarity is needed. Use the `zod` library for schema validation, especially for environment variables and API inputs.
+- **Path Aliases**: Always use the `@/*` path alias for imports from the `src` directory to maintain clean and consistent import paths. For example, import a component with `import { Button } from '@/components/ui/button'`.
+
+## 2. Frontend Development
+
+### Tanstack Router (File-Based Routing)
+- All routes are defined within the `src/routes/` directory.
+- The root layout is `src/routes/__root.tsx`. This file contains the main page structure and global providers.
+- To create a new page, add a new `.tsx` file to the `src/routes/` directory (e.g., `src/routes/about.tsx` creates the `/about` route).
+- For dynamic routes, use the `$` prefix (e.g., `src/routes/posts/$postId.tsx`).
+
+### Tanstack Query (Data Fetching & Caching)
+- Use Tanstack Query for all interactions with the server's state.
+- For fetching data, use the `createQuery` options from `@tanstack/react-query`.
+- For creating, updating, or deleting data, use mutations created via `@orpc/tanstack-query` which wrap oRPC procedures.
+
+### Tanstack Form (Form State Management)
+- Use `@tanstack/react-form` for managing all forms.
+- Define form fields, validation (preferably with `zod`), and submission logic using the `useForm` hook.
+- Integrate with Shadcn components for the form's UI.
+
+### Shadcn/ui & TailwindCSS
+- **Component Library**: Use components from Shadcn/ui whenever possible. These components live in `src/components/ui`.
+- **Adding New Components**: To add a new Shadcn component, use the following command. Do not install them manually.
+  ```bash
+  pnpx shadcn@latest add <component_name>
+  ```
+- **Styling**: All styling should be done with TailwindCSS utility classes. Use the `clsx` and `tailwind-merge` utilities (via the `cn` helper in `src/lib/utils.ts`) to conditionally apply classes.
+- **Custom Components**: New, reusable components should be created in the `src/components/` directory.
+
+## 3. Backend Development
+
+### oRPC (API Layer)
+- API endpoints are defined as oRPC procedures in the `src/orpc/` directory.
+- Each procedure should be a function that uses `proc` from `@orpc/server`.
+- Use `zod` schemas to define and validate the `input` for each procedure.
+- The oRPC client is pre-configured. Use it on the frontend via the hooks provided by `@orpc/tanstack-query`.
+
+### Drizzle ORM (Database)
+- **Schema**: The database schema is defined across files in the `src/db/schema/` directory, which are exported from `index.ts`. When you need to add or modify tables, edit the relevant file in that directory.
+- **Migrations**: After altering the schema in `src/db/schema/`, you MUST generate a new migration file.
+  ```bash
+  pnpm db:generate
+  ```
+- **Queries**: Use the Drizzle query builder syntax for all database operations. The Drizzle instance is available from the database connection file.
+
+## 4. Authentication
+
+- Authentication is handled by the `better-auth` library.
+- On the server, use the `better-auth` helpers to manage sessions and protect oRPC procedures.
+- On the client, access user data and authentication state through the hooks provided by `better-auth`.
+
+## 5. Important Commands
+
+- **Run development server**: `pnpm dev`
+- **Build for production**: `pnpm build`
+- **Generate database migrations**: `pnpm db:generate`
+- **Apply database migrations**: `pnpm db:migrate`
+- **Add a new UI component**: `pnpx shadcn@latest add <component_name>`
