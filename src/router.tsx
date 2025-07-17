@@ -7,7 +7,7 @@ import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 import { orpc } from "@/orpc/react";
 import { QueryClient } from "@tanstack/react-query";
-import { getCurrentUser } from "./lib/auth";
+import { getCurrentUserFn } from "@/lib/auth";
 
 export function getContext() {
   const queryClient = new QueryClient({
@@ -21,7 +21,7 @@ export function getContext() {
   return {
     queryClient: queryClient,
     orpc: orpc,
-    getCurrentUser: getCurrentUser(),
+    getCurrentUser: getCurrentUserFn(),
   };
 }
 
@@ -32,7 +32,9 @@ export const createRouter = () => {
       routeTree,
       context: getContext(),
       scrollRestoration: true,
+      defaultPreload: "intent",
       defaultPreloadStaleTime: 0,
+      defaultNotFoundComponent: () => <div>Not Found</div>,
     }),
     getContext().queryClient,
   );

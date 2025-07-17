@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { signIn, useSession } from "@/lib/auth-client";
+import { signIn, useSession } from "@/lib/auth/auth-client";
 import { Link } from "@tanstack/react-router";
 
 export default function Header() {
-  const { data: session } = useSession();
+  // const { data: session } = useSession();
 
   return (
     <header className="p-2 flex gap-2 bg-white text-black justify-between">
@@ -48,9 +48,7 @@ export default function Header() {
         </div>
 
         <div className="px-2 font-bold">
-          <Link to="/demo/form/address">
-            {session?.user?.email || "Not logged in"}
-          </Link>
+          <Link to="/demo/form/address"></Link>
         </div>
       </nav>
     </header>

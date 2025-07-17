@@ -1,11 +1,14 @@
 import { db } from "@/db";
+import { authMiddleware } from "@/orpc/middlewares";
 import { os } from "@orpc/server";
 
-const ping = os.handler(async () => {
+export const baseOS = os.$context<{ headers: Headers }>();
+
+const ping = baseOS.handler(async () => {
   console.log("ping");
   return "ping";
 });
-const pong = os.handler(async () => {
+const pong = baseOS.handler(async () => {
   const ts1 = performance.now();
   const result = await db.execute(
     "SELECT * FROM todos ORDER BY id DESC LIMIT 10",
@@ -14,9 +17,13 @@ const pong = os.handler(async () => {
   return { rows: result.rows };
 });
 
+const profile = baseOS.use(authMiddleware).handler(async ({ context }) => {
+  return `Hello ${context.user.name} !`;
+});
+
 export const router = {
   ping,
   pong,
-  nested: { ping, pong },
+  profile,
 };
 export type ORPCRouter = typeof router;

@@ -5,7 +5,9 @@ import { orpc } from "@/orpc/react";
 
 export const Route = createFileRoute("/demo/tanstack-query")({
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(context.orpc.ping.queryOptions());
+    await context.queryClient.prefetchQuery(
+      context.orpc.profile.queryOptions(),
+    );
     await context.queryClient.prefetchQuery(context.orpc.pong.queryOptions());
   },
 
@@ -13,7 +15,7 @@ export const Route = createFileRoute("/demo/tanstack-query")({
 });
 
 function TanStackQueryDemo() {
-  const { data: msg } = useQuery(orpc.ping.queryOptions());
+  const { data: msg } = useQuery(orpc.profile.queryOptions());
   const { data: result } = useQuery(orpc.pong.queryOptions());
 
   return (
