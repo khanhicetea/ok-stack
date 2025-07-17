@@ -16,10 +16,20 @@ RUN BUILD_TARGET=node-server pnpm run build
 
 FROM node:22-alpine
 
+RUN apk add --no-cache curl tar \
+    && rm -rf /var/cache/apk/* \
+    && curl -L curl -L https://github.com/DarthSim/hivemind/releases/download/v1.1.0/hivemind-v1.1.0-linux-amd64.gz | gunzip > hivemind \
+    && mv hivemind /usr/local/bin/hivemind \
+    && chmod +x /usr/local/bin/hivemind \
+    && curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared \
+    && chmod +x /usr/local/bin/cloudflared
+
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/.output /app/.output
+COPY ./Procfile /app/Procfile
 
 EXPOSE 3000
+
 WORKDIR /app
 
-CMD ["node", ".output/server/index.mjs"]
+ENTRYPOINT ["/usr/local/bin/hivemind"]
