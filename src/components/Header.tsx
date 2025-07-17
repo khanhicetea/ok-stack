@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { signIn, useSession } from "@/lib/auth/auth-client";
+import { signIn } from "@/lib/auth/auth-client";
 import { Link } from "@tanstack/react-router";
 
 export default function Header() {

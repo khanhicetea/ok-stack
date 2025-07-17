@@ -23,7 +23,6 @@ interface MyRouterContext {
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   beforeLoad: async ({ context }) => {
-    console.log("before load root");
     const user = await context.getCurrentUser();
     return { user };
   },

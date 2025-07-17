@@ -6,7 +6,6 @@ import { getHeaders } from "@tanstack/react-start/server";
 export const getCurrentUserFn = createIsomorphicFn()
   .server(() => {
     return async () => {
-      console.log("fetch from server");
       const data = await auth.api.getSession({
         headers: getHeaders() as any,
       });
@@ -15,7 +14,6 @@ export const getCurrentUserFn = createIsomorphicFn()
   })
   .client(() => {
     return async () => {
-      console.log("fetch from client");
       const { data } = await authClient.getSession();
       return data?.user;
     };
