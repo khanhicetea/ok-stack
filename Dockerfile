@@ -24,6 +24,9 @@ RUN apk add --no-cache curl tar \
     && curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared \
     && chmod +x /usr/local/bin/cloudflared
 
+RUN apk add --no-cache multirun \
+    && rm -rf /var/cache/apk/*
+
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/.output /app/.output
 COPY ./Procfile /app/Procfile
@@ -32,4 +35,6 @@ EXPOSE 3000
 
 WORKDIR /app
 
-ENTRYPOINT ["/usr/local/bin/hivemind"]
+ENTRYPOINT ["multirun"]
+
+CMD ["/usr/local/bin/node .output/server/index.mjs", "/usr/local/bin/cloudflared tunnel run"]
