@@ -9,13 +9,13 @@ export const getCurrentUserFn = createIsomorphicFn()
       const data = await auth.api.getSession({
         headers: getHeaders() as any,
       });
-      return data?.user;
+      return data?.user || null;
     };
   })
   .client(() => {
     return async () => {
       const { data } = await authClient.getSession();
-      return data?.user;
+      return data?.user || null;
     };
   });
 

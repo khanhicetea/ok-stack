@@ -22,16 +22,17 @@ export function getContext() {
     queryClient: queryClient,
     orpc: orpc,
     getCurrentUser: async () => {
-      const currentUser = await queryClient.ensureQueryData({
+      await queryClient.prefetchQuery({
         queryKey: ["currentUser"],
-        staleTime: 10 * 1000,
+        staleTime: 60 * 1000,
         queryFn: getCurrentUserFn(),
       });
-      console.log("currnet", currentUser);
 
-      return queryClient.getQueryData([
+      const currentUser = queryClient.getQueryData([
         "currentUser",
       ]) as ReturnType<CurrentUserFn>;
+
+      return currentUser;
     },
   };
 }
