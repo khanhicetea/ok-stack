@@ -16,26 +16,19 @@ RUN BUILD_TARGET=node-server pnpm run build
 
 FROM node:22-alpine
 
-# RUN apk add --no-cache curl tar \
+# RUN apk add --no-cache curl multirun  \
 #     && rm -rf /var/cache/apk/* \
-#     && curl -L curl -L https://github.com/DarthSim/hivemind/releases/download/v1.1.0/hivemind-v1.1.0-linux-amd64.gz | gunzip > hivemind \
-#     && mv hivemind /usr/local/bin/hivemind \
-#     && chmod +x /usr/local/bin/hivemind \
-
-
-RUN apk add --no-cache curl multirun  \
-    && rm -rf /var/cache/apk/* \
-    && curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared \
-    && chmod +x /usr/local/bin/cloudflared
+#     && curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared \
+#     && chmod +x /usr/local/bin/cloudflared
 
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/.output /app/.output
-COPY ./Procfile /app/Procfile
 
 EXPOSE 3000
 
 WORKDIR /app
 
-ENTRYPOINT ["multirun"]
+CMD ["/usr/local/bin/node", ".output/server/index.mjs"]
 
-CMD ["/usr/local/bin/node .output/server/index.mjs", "/usr/local/bin/cloudflared tunnel --no-autoupdate run"]
+# ENTRYPOINT ["multirun"]
+# CMD ["/usr/local/bin/node .output/server/index.mjs", "/usr/local/bin/cloudflared tunnel --no-autoupdate run"]
