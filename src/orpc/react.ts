@@ -24,7 +24,7 @@ const getORPCClient = createIsomorphicFn()
         new BatchLinkPlugin({
           groups: [
             {
-              condition: (options) => true,
+              condition: () => true,
               context: {}, // Context used for the rest of the request lifecycle
             },
           ],

@@ -8,6 +8,13 @@
       "when": 1752662567195,
       "tag": "0000_lumpy_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1752806624564,
+      "tag": "0001_condemned_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }
